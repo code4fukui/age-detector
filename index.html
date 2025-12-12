@@ -7,7 +7,8 @@
   <style>
     body { font-family: system-ui, sans-serif; margin: 16px; }
     #wrap { position: relative; display: inline-block; }
-    video, canvas { width: 90vw; max-width: 100%; border-radius: 12px; transform: scaleX(-1); }
+    video, canvas { width: 90vw; max-width: 100%; border-radius: 12px; }
+    video { transform: scaleX(-1); }
     canvas { position: absolute; left: 0; top: 0; }
     .row { display:flex; gap:12px; align-items:center; flex-wrap: wrap; margin: 12px 0; }
     .pill { font-size: 150%; padding: .5em 1em; border: 1px solid #ddd; border-radius: 999px; }
@@ -74,8 +75,13 @@
       const detections = await faceapi.detectAllFaces(video, options).withAgeAndGender();
 
       // 描画（顔枠）
+      const flipW = (box) => {
+        return { x: canvas.width - (box.x + box.width), y: box.y, width: box.width, height: box.height };
+      };
       detections.forEach(d => {
-        const { x, y, width, height } = d.detection.box;
+        const { x, y, width, height } = flipW(d.detection.box);
+        ctx.strokeStyle = 'rgba(255,255,255,1)';
+        ctx.fillStyle = 'rgba(255,255,255,1)';
         ctx.strokeRect(x, y, width, height);
 
         const age = d.age;
@@ -91,7 +97,7 @@
       if (detections.length) {
         const best = detections
           .slice()
-          .sort((a,b) => (b.detection.box.width*b.detection.box.height) - (a.detection.box.width*a.detection.box.height))[0];
+          .sort((a,b) => (b.detection.box.width * b.detection.box.height) - (a.detection.box.width * a.detection.box.height))[0];
         const d = best;
         const age = d.age;
         const gender = d.gender === 'male' ? 'Male' : 'Female';
