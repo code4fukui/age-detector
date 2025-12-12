@@ -21,6 +21,7 @@
   <div class="row">
     <button id="start">Start</button>
     <span class="pill" id="status">未起動</span>
+    <span class="pill" id="faces">faces: </span>
     <span class="pill" id="result">age: -</span>
   </div>
 
@@ -67,12 +68,14 @@
       //inloop = true;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+      
+      const inputSize = canvas.width; // 320
       const options = new faceapi.TinyFaceDetectorOptions({
-        inputSize: 320,
-        scoreThreshold: 0.5
+        inputSize,
+        scoreThreshold: 0.4,
       });
       const detections = await faceapi.detectAllFaces(video, options).withAgeAndGender();
+      faces.textContent = "faces: " + detections.length;
 
       // 描画（顔枠）
       const flipW = (box) => {
@@ -88,7 +91,7 @@
         const gender = d.gender === 'male' ? 'Male' : 'Female';
         const prob = (d.genderProbability * 100).toFixed(0);
 
-        const ageText = `gender: ${gender} ${prob}% / age: ${age.toFixed(0)}`;
+        const ageText = `${gender} ${prob}% (${age.toFixed(0)})`;
         //const ageText = `age: ${age.toFixed(1)}`;
         ctx.fillText(ageText, x, Math.max(12, y - 6));
       });
@@ -97,13 +100,13 @@
       if (detections.length) {
         const best = detections
           .slice()
-          .sort((a,b) => (b.detection.box.width * b.detection.box.height) - (a.detection.box.width * a.detection.box.height))[0];
+          .sort((a,b) => b.detection.box.width * b.detection.box.height - a.detection.box.width * a.detection.box.height)[0];
         const d = best;
         const age = d.age;
         const gender = d.gender === 'male' ? 'Male' : 'Female';
         const prob = (d.genderProbability * 100).toFixed(0);
 
-        const ageText = `gender: ${gender} ${prob}% / age: ${age.toFixed(0)}`;
+        const ageText = `${gender} ${prob}% (${age.toFixed(0)})`;
 
         const dt = 1000;
         //if (!resultEl.nextUpdate || resultEl.nextUpdate > performance.now()) {
@@ -111,7 +114,6 @@
         if (!resultEl.nextUpdate || resultEl.nextUpdate < now) {
           resultEl.textContent = ageText;
           resultEl.nextUpdate = now + dt;
-          console.log("up", resultEl.nextUpdate, now);
         }
         //resultEl.textContent = `age: ${best.age.toFixed(1)}`;
       } else {
