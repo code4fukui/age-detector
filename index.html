@@ -10,8 +10,8 @@
     video, canvas { width: 90vw; max-width: 100%; border-radius: 12px; transform: scaleX(-1); }
     canvas { position: absolute; left: 0; top: 0; }
     .row { display:flex; gap:12px; align-items:center; flex-wrap: wrap; margin: 12px 0; }
-    .pill { padding: 6px 10px; border: 1px solid #ddd; border-radius: 999px; }
-    button { padding: 8px 12px; border-radius: 10px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+    .pill { font-size: 150%; padding: .5em 1em; border: 1px solid #ddd; border-radius: 999px; }
+    button { font-size: 150%; padding: .5em 1em; border-radius: 10px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -57,15 +57,21 @@
       await faceapi.nets.ageGenderNet.loadFromUri(url);
     }
 
+    const ctx = canvas.getContext('2d');
+
+    //let inloop = false;
     async function loop() {
       if (!running) return;
+      //if (inloop) return;
+      //inloop = true;
 
-      const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const detections = await faceapi
-        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
-        .withAgeAndGender();
+      const options = new faceapi.TinyFaceDetectorOptions({
+        inputSize: 320,
+        scoreThreshold: 0.5
+      });
+      const detections = await faceapi.detectAllFaces(video, options).withAgeAndGender();
 
       // 描画（顔枠）
       detections.forEach(d => {
@@ -92,13 +98,23 @@
         const prob = (d.genderProbability * 100).toFixed(0);
 
         const ageText = `gender: ${gender} ${prob}% / age: ${age.toFixed(0)}`;
-        resultEl.textContent = ageText;
+
+        const dt = 1000;
+        //if (!resultEl.nextUpdate || resultEl.nextUpdate > performance.now()) {
+        const now = performance.now();
+        if (!resultEl.nextUpdate || resultEl.nextUpdate < now) {
+          resultEl.textContent = ageText;
+          resultEl.nextUpdate = now + dt;
+          console.log("up", resultEl.nextUpdate, now);
+        }
         //resultEl.textContent = `age: ${best.age.toFixed(1)}`;
       } else {
         resultEl.textContent = '-';
       }
 
-      requestAnimationFrame(loop);
+      //requestAnimationFrame(loop); // NG
+      setTimeout(loop, 100);
+      //inloop = false;
     }
 
     startBtn.onclick = async () => {
