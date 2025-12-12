@@ -7,7 +7,7 @@
   <style>
     body { font-family: system-ui, sans-serif; margin: 16px; }
     #wrap { position: relative; display: inline-block; }
-    video, canvas { width: 90vw; max-width: 100%; border-radius: 12px; }
+    video, canvas { width: 90vw; max-width: 100%; border-radius: 12px; transform: scaleX(-1); }
     canvas { position: absolute; left: 0; top: 0; }
     .row { display:flex; gap:12px; align-items:center; flex-wrap: wrap; margin: 12px 0; }
     .pill { padding: 6px 10px; border: 1px solid #ddd; border-radius: 999px; }
@@ -73,7 +73,11 @@
         ctx.strokeRect(x, y, width, height);
 
         const age = d.age;
-        const ageText = `age: ${age.toFixed(1)}`;
+        const gender = d.gender === 'male' ? 'Male' : 'Female';
+        const prob = (d.genderProbability * 100).toFixed(0);
+
+        const ageText = `gender: ${gender} ${prob}% / age: ${age.toFixed(0)}`;
+        //const ageText = `age: ${age.toFixed(1)}`;
         ctx.fillText(ageText, x, Math.max(12, y - 6));
       });
 
@@ -82,9 +86,16 @@
         const best = detections
           .slice()
           .sort((a,b) => (b.detection.box.width*b.detection.box.height) - (a.detection.box.width*a.detection.box.height))[0];
-        resultEl.textContent = `age: ${best.age.toFixed(1)}`;
+        const d = best;
+        const age = d.age;
+        const gender = d.gender === 'male' ? 'Male' : 'Female';
+        const prob = (d.genderProbability * 100).toFixed(0);
+
+        const ageText = `gender: ${gender} ${prob}% / age: ${age.toFixed(0)}`;
+        resultEl.textContent = ageText;
+        //resultEl.textContent = `age: ${best.age.toFixed(1)}`;
       } else {
-        resultEl.textContent = 'age: -';
+        resultEl.textContent = '-';
       }
 
       requestAnimationFrame(loop);
