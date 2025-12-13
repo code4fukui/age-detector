@@ -1,140 +1,157 @@
-<!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>年齢推定（Webカメラ）</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 16px; }
-    #wrap { position: relative; display: inline-block; }
-    video, canvas { width: 90vw; max-width: 100%; border-radius: 12px; }
-    video { transform: scaleX(-1); }
-    canvas { position: absolute; left: 0; top: 0; }
-    .row { display:flex; gap:12px; align-items:center; flex-wrap: wrap; margin: 12px 0; }
-    .pill { font-size: 150%; padding: .5em 1em; border: 1px solid #ddd; border-radius: 999px; }
-    button { font-size: 150%; padding: .5em 1em; border-radius: 10px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
-  </style>
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="icon" href="data:">
+<title>年齢推定（Webカメラ）</title>
+<style>
+body { font-family: system-ui, sans-serif; margin: 16px; }
+#wrap { position: relative; display: inline-block; }
+video, canvas { width: 90vw; max-width: 100%; border-radius: 12px; }
+video { transform: scaleX(-1); }
+canvas { position: absolute; left: 0; top: 0; }
+.row { display:flex; gap:12px; align-items:center; flex-wrap: wrap; margin: 12px 0; }
+.pill { font-size: 150%; padding: .5em 1em; border: 1px solid #ddd; border-radius: 999px; }
+button { font-size: 150%; padding: .5em 1em; border-radius: 10px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+</style>
 </head>
 <body>
-  <h1>年齢推定（Webカメラ）</h1>
+<h1>年齢推定（Webカメラ）</h1>
 
-  <div class="row">
-    <button id="start">Start</button>
-    <span class="pill" id="status">未起動</span>
-    <span class="pill" id="faces">faces: </span>
-    <span class="pill" id="result">age: -</span>
-  </div>
+<div class="row">
+  <button id="start">Start</button>
+  <span class="pill" id="status">未起動</span>
+  <span class="pill" id="faces">faces: </span>
+  <span class="pill" id="result">age: -</span>
+</div>
 
-  <div id="wrap">
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="overlay"></canvas>
-  </div>
+<div id="wrap">
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="overlay"></canvas>
+</div>
 
-  <!-- face-api.js -->
-  <script defer src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('overlay');
-    const statusEl = document.getElementById('status');
-    const resultEl = document.getElementById('result');
-    const startBtn = document.getElementById('start');
+<hr>
+Lib: <a href=https://github.com/justadudewhohacks/face-api.js>face-api.js</a><br>
+<a href=https://github.com/code4fukui/age-detecttor/>src on GitHub</a><br>
 
-    let running = false;
+<!-- face-api.js -->
+<script defer x-src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script defer src="./face-api.min.js"></script>
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('overlay');
+const statusEl = document.getElementById('status');
+const resultEl = document.getElementById('result');
+const startBtn = document.getElementById('start');
 
-    async function setupCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" }, audio: false
-      });
-      video.srcObject = stream;
-      await new Promise(r => (video.onloadedmetadata = r));
-      video.play();
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+let running = false;
+
+async function setupCamera() {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "user" }, audio: false
+  });
+  video.srcObject = stream;
+  await new Promise(r => (video.onloadedmetadata = r));
+  video.play();
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+}
+
+async function loadModels() {
+  // ここで ./models/ から weights を読む
+  const url = './models';
+  await faceapi.nets.tinyFaceDetector.loadFromUri(url);
+  await faceapi.nets.ageGenderNet.loadFromUri(url);
+}
+
+const ctx = canvas.getContext('2d');
+
+//let inloop = false;
+async function loop() {
+  if (!running) return;
+  //if (inloop) return;
+  //inloop = true;
+
+  const inputSize = canvas.width; // 320
+  const options = new faceapi.TinyFaceDetectorOptions({
+    inputSize,
+    scoreThreshold: 0.4,
+  });
+  const detections = await faceapi.detectAllFaces(video, options).withAgeAndGender();
+  faces.textContent = "faces: " + detections.length;
+  
+  // 描画スタート
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // 描画（顔枠）
+  const flipW = (box) => {
+    return { x: canvas.width - (box.x + box.width), y: box.y, width: box.width, height: box.height };
+  };
+  detections.forEach(d => {
+    const { x, y, width, height } = flipW(d.detection.box);
+    ctx.strokeStyle = 'rgba(255,255,255,1)';
+    ctx.fillStyle = 'rgba(255,255,255,1)';
+    ctx.strokeRect(x, y, width, height);
+
+    const age = d.age;
+    const gender = d.gender === 'male' ? 'Male' : 'Female';
+    const prob = (d.genderProbability * 100).toFixed(0);
+
+    const ageText = `${gender} ${prob}% (${age.toFixed(0)})`;
+    //const ageText = `age: ${age.toFixed(1)}`;
+    ctx.fillText(ageText, x, Math.max(12, y - 6));
+  });
+
+  // 一番大きい顔を代表値として表示
+  if (detections.length) {
+    const best = detections
+      .slice()
+      .sort((a,b) => b.detection.box.width * b.detection.box.height - a.detection.box.width * a.detection.box.height)[0];
+    const d = best;
+    const age = d.age;
+    const gender = d.gender === 'male' ? 'Male' : 'Female';
+    const prob = (d.genderProbability * 100).toFixed(0);
+
+    const ageText = `${gender} ${prob}% (${age.toFixed(0)})`;
+
+    const dt = 1000;
+    //if (!resultEl.nextUpdate || resultEl.nextUpdate > performance.now()) {
+    const now = performance.now();
+    if (!resultEl.nextUpdate || resultEl.nextUpdate < now) {
+      resultEl.textContent = ageText;
+      resultEl.nextUpdate = now + dt;
     }
+    //resultEl.textContent = `age: ${best.age.toFixed(1)}`;
+  } else {
+    resultEl.textContent = '-';
+  }
 
-    async function loadModels() {
-      // ここで ./models/ から weights を読む
-      const url = './models';
-      await faceapi.nets.tinyFaceDetector.loadFromUri(url);
-      await faceapi.nets.ageGenderNet.loadFromUri(url);
-    }
+  //requestAnimationFrame(loop); // NG
+  setTimeout(loop, 100);
+  //inloop = false;
+}
 
-    const ctx = canvas.getContext('2d');
+function stopStreamedVideo(videoElem) {
+  const stream = videoElem.srcObject;
+  const tracks = stream.getTracks();
+  tracks.forEach((track) => {
+    track.stop();
+  });
+  videoElem.srcObject = null;
+}
 
-    //let inloop = false;
-    async function loop() {
-      if (!running) return;
-      //if (inloop) return;
-      //inloop = true;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      const inputSize = canvas.width; // 320
-      const options = new faceapi.TinyFaceDetectorOptions({
-        inputSize,
-        scoreThreshold: 0.4,
-      });
-      const detections = await faceapi.detectAllFaces(video, options).withAgeAndGender();
-      faces.textContent = "faces: " + detections.length;
-
-      // 描画（顔枠）
-      const flipW = (box) => {
-        return { x: canvas.width - (box.x + box.width), y: box.y, width: box.width, height: box.height };
-      };
-      detections.forEach(d => {
-        const { x, y, width, height } = flipW(d.detection.box);
-        ctx.strokeStyle = 'rgba(255,255,255,1)';
-        ctx.fillStyle = 'rgba(255,255,255,1)';
-        ctx.strokeRect(x, y, width, height);
-
-        const age = d.age;
-        const gender = d.gender === 'male' ? 'Male' : 'Female';
-        const prob = (d.genderProbability * 100).toFixed(0);
-
-        const ageText = `${gender} ${prob}% (${age.toFixed(0)})`;
-        //const ageText = `age: ${age.toFixed(1)}`;
-        ctx.fillText(ageText, x, Math.max(12, y - 6));
-      });
-
-      // 一番大きい顔を代表値として表示
-      if (detections.length) {
-        const best = detections
-          .slice()
-          .sort((a,b) => b.detection.box.width * b.detection.box.height - a.detection.box.width * a.detection.box.height)[0];
-        const d = best;
-        const age = d.age;
-        const gender = d.gender === 'male' ? 'Male' : 'Female';
-        const prob = (d.genderProbability * 100).toFixed(0);
-
-        const ageText = `${gender} ${prob}% (${age.toFixed(0)})`;
-
-        const dt = 1000;
-        //if (!resultEl.nextUpdate || resultEl.nextUpdate > performance.now()) {
-        const now = performance.now();
-        if (!resultEl.nextUpdate || resultEl.nextUpdate < now) {
-          resultEl.textContent = ageText;
-          resultEl.nextUpdate = now + dt;
-        }
-        //resultEl.textContent = `age: ${best.age.toFixed(1)}`;
-      } else {
-        resultEl.textContent = '-';
-      }
-
-      //requestAnimationFrame(loop); // NG
-      setTimeout(loop, 100);
-      //inloop = false;
-    }
-
-    startBtn.onclick = async () => {
-      if (running) return;
-      statusEl.textContent = 'モデル読み込み中…';
-      await loadModels();
-      statusEl.textContent = 'カメラ起動中…';
-      await setupCamera();
-      running = true;
-      statusEl.textContent = '推定中';
-      loop();
-    };
-  </script>
+startBtn.onclick = async () => {
+  if (!running) {
+    statusEl.textContent = 'モデル読み込み中…';
+    await loadModels();
+    statusEl.textContent = 'カメラ起動中…';
+    await setupCamera();
+    running = true;
+    statusEl.textContent = '推定中';
+    loop();
+    startBtn.textContent = "Stop";
+  } else {
+    running = false;
+    stopStreamedVideo(video);
+    startBtn.textContent = "Start";
+    statusEl.textContent = '未起動';
+  }
+};
+</script>
 </body>
 </html>
