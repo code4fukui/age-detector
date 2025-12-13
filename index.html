@@ -43,6 +43,7 @@ const startBtn = document.getElementById('start');
 
 let running = false;
 
+/*
 const devs = await navigator.mediaDevices.enumerateDevices();
 for (const dev of devs) {
   if (dev.kind != "videoinput") continue;
@@ -52,6 +53,7 @@ for (const dev of devs) {
   opt.textContent = dev.label;
   selcam.appendChild(opt);
 }
+*/
 
 async function setupCamera() {
   const video = {
@@ -60,7 +62,11 @@ async function setupCamera() {
     audio: false,
   };
   console.log(video);
-  const stream = await navigator.mediaDevices.getUserMedia({ video });
+  //const stream = await navigator.mediaDevices.getUserMedia({ video });
+  const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" }, audio: false
+  });
+
   video.srcObject = stream;
   await new Promise(r => (video.onloadedmetadata = r));
   video.play();
