@@ -30,10 +30,9 @@ button { font-size: 150%; padding: .5em 1em; border-radius: 10px; border: 1px so
 Lib: <a href=https://github.com/justadudewhohacks/face-api.js>face-api.js</a><br>
 <a href=https://github.com/code4fukui/age-detecttor/>src on GitHub</a><br>
 
-<!-- face-api.js -->
-<script defer x-src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
-<script defer src="./face-api.min.js"></script>
-<script>
+<script type="module">
+import faceapi from "./face-api.min.js";
+
 const video = document.getElementById('video');
 const canvas = document.getElementById('overlay');
 const statusEl = document.getElementById('status');
@@ -62,11 +61,8 @@ async function loadModels() {
 
 const ctx = canvas.getContext('2d');
 
-//let inloop = false;
 async function loop() {
   if (!running) return;
-  //if (inloop) return;
-  //inloop = true;
 
   const inputSize = canvas.width; // 320
   const options = new faceapi.TinyFaceDetectorOptions({
@@ -101,7 +97,7 @@ async function loop() {
   if (detections.length) {
     const best = detections
       .slice()
-      .sort((a,b) => b.detection.box.width * b.detection.box.height - a.detection.box.width * a.detection.box.height)[0];
+      .sort((a, b) => b.detection.box.width * b.detection.box.height - a.detection.box.width * a.detection.box.height)[0];
     const d = best;
     const age = d.age;
     const gender = d.gender === 'male' ? 'Male' : 'Female';
@@ -110,20 +106,14 @@ async function loop() {
     const ageText = `${gender} ${prob}% (${age.toFixed(0)})`;
 
     const dt = 1000;
-    //if (!resultEl.nextUpdate || resultEl.nextUpdate > performance.now()) {
     const now = performance.now();
     if (!resultEl.nextUpdate || resultEl.nextUpdate < now) {
       resultEl.textContent = ageText;
       resultEl.nextUpdate = now + dt;
     }
-    //resultEl.textContent = `age: ${best.age.toFixed(1)}`;
-  } else {
-    resultEl.textContent = '-';
   }
 
-  //requestAnimationFrame(loop); // NG
-  setTimeout(loop, 100);
-  //inloop = false;
+  requestAnimationFrame(loop);
 }
 
 function stopStreamedVideo(videoElem) {
