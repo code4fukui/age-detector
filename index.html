@@ -3,10 +3,11 @@
 <style>
 body { font-family: system-ui, sans-serif; margin: 16px; }
 #wrap { position: relative; display: inline-block; }
+select { padding: .3em; font-size: 130% }
 video, canvas { width: 90vw; max-width: 100%; border-radius: 12px; }
 video { transform: scaleX(-1); }
 canvas { position: absolute; left: 0; top: 0; }
-.row { display:flex; gap:12px; align-items:center; flex-wrap: wrap; margin: 12px 0; }
+.row { display: flex; gap:12px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
 .pill { font-size: 150%; padding: .5em 1em; border: 1px solid #ddd; border-radius: 999px; }
 button { font-size: 150%; padding: .5em 1em; border-radius: 10px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
 </style>
@@ -15,6 +16,7 @@ button { font-size: 150%; padding: .5em 1em; border-radius: 10px; border: 1px so
 <h1>年齢推定（Webカメラ）</h1>
 
 <div class="row">
+  <select id="selcam"></select>
   <button id="start">Start</button>
   <span class="pill" id="status">未起動</span>
   <span class="pill" id="faces">faces: </span>
@@ -41,15 +43,30 @@ const startBtn = document.getElementById('start');
 
 let running = false;
 
+const devs = await navigator.mediaDevices.enumerateDevices();
+for (const dev of devs) {
+  if (dev.kind != "videoinput") continue;
+  const opt = document.createElement("option");
+  console.log(dev);
+  opt.value = dev.deviceId;
+  opt.textContent = dev.label;
+  selcam.appendChild(opt);
+}
+
 async function setupCamera() {
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: "user" }, audio: false
-  });
+  const video = {
+    facingMode: "user",
+    deviceId: selcam.value,
+    audio: false,
+  };
+  console.log(video);
+  const stream = await navigator.mediaDevices.getUserMedia({ video });
   video.srcObject = stream;
   await new Promise(r => (video.onloadedmetadata = r));
   video.play();
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
+  conosle.log(viedo.width)
 }
 
 async function loadModels() {
