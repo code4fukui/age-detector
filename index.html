@@ -30,7 +30,7 @@ button { font-size: 150%; padding: .5em 1em; border-radius: 10px; border: 1px so
 
 <hr>
 Lib: <a href=https://github.com/justadudewhohacks/face-api.js>face-api.js</a><br>
-<a href=https://github.com/code4fukui/age-detecttor/>src on GitHub</a><br>
+<a href=https://github.com/code4fukui/age-detector/>src on GitHub</a><br>
 
 <script type="module">
 import faceapi from "./face-api.min.js";
@@ -43,7 +43,6 @@ const startBtn = document.getElementById('start');
 
 let running = false;
 
-/*
 const devs = await navigator.mediaDevices.enumerateDevices();
 for (const dev of devs) {
   if (dev.kind != "videoinput") continue;
@@ -53,26 +52,19 @@ for (const dev of devs) {
   opt.textContent = dev.label;
   selcam.appendChild(opt);
 }
-*/
 
 async function setupCamera() {
-  const video = {
-    facingMode: "user",
-    deviceId: selcam.value,
-    audio: false,
-  };
-  console.log(video);
-  //const stream = await navigator.mediaDevices.getUserMedia({ video });
+  console.log(selcam.value);
   const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" }, audio: false
+    video: { facingMode: "user", deviceId: selcam.value }, audio: false
   });
-
+  video.srcObject = stream;
   video.srcObject = stream;
   await new Promise(r => (video.onloadedmetadata = r));
   video.play();
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
-  conosle.log(viedo.width)
+  canvas.style.aspectRatio = video.videoWidth + " / " + video.videoHeight;
 }
 
 async function loadModels() {
